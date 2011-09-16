@@ -17,6 +17,7 @@
 		docElem 		= doc.documentElement,
 		mediastyles		= [],
 		rules			= [],
+		currentIds		= "",
 		appendedEls 	= [],
 		parsedSheets 	= {},
 		resizeThrottle	= 30,
@@ -140,9 +141,9 @@
 				docElemProp	= docElem[ name ],
 				currWidth 	= doc.compatMode === "CSS1Compat" && docElemProp || doc.body[ name ] || docElemProp,
 				styleBlocks	= {},
-				dFrag		= doc.createDocumentFragment(),
 				lastLink	= links[ links.length-1 ],
-				now 		= (new Date()).getTime();
+				now 		= (new Date()).getTime(),
+				newIds		= [];
 			
 			//throttle resize calls	
 			if( fromResize && lastCall && now - lastCall < resizeThrottle ){
@@ -154,7 +155,7 @@
 				lastCall	= now;
 			}
 										
-			for( var i in mediastyles ){
+			for( var i = 0; i < mediastyles.length; i++ ){
 				var thisstyle = mediastyles[ i ];
 				if( !thisstyle.minw && !thisstyle.maxw || 
 					( !thisstyle.minw || thisstyle.minw && currWidth >= thisstyle.minw ) && 
@@ -162,8 +163,18 @@
 						if( !styleBlocks[ thisstyle.media ] ){
 							styleBlocks[ thisstyle.media ] = [];
 						}
+						newIds.push( i );
 						styleBlocks[ thisstyle.media ].push( rules[ thisstyle.rules ] );
 				}
+			}
+			
+			//skip if nothing has changed
+			newIds	= newIds.join("-");
+			if( newIds === currentIds ) {
+				return;
+			}
+			else {
+				currentIds	= newIds;
 			}
 			
 			//remove any existing respond style element(s)
@@ -180,6 +191,9 @@
 				
 				ss.type = "text/css";	
 				ss.media	= i;
+			
+				//append to DOM first for IE7
+				head.insertBefore( ss, lastLink.nextSibling );
 				
 				if ( ss.styleSheet ){ 
 		        	ss.styleSheet.cssText = css;
@@ -187,12 +201,8 @@
 		        else {
 					ss.appendChild( doc.createTextNode( css ) );
 		        }
-		        dFrag.appendChild( ss );
 				appendedEls.push( ss );
 			}
-			
-			//append to DOM at once
-			head.insertBefore( dFrag, lastLink.nextSibling );
 		},
 		//tweaked Ajax functions from Quirksmode
 		ajax = function( url, callback ) {
